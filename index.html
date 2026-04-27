@@ -1,1 +1,554 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#1a1a2e">
+    <title>Циклический таймер 5.5 сек</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none; /* Запрет выделения текста на мобильных */
+            -webkit-tap-highlight-color: transparent;
+        }
 
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, sans-serif;
+            padding: 20px;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(10px);
+            border-radius: 72px;
+            padding: 32px 24px 48px;
+            box-shadow: 0 25px 45px rgba(0, 0, 0, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            width: 100%;
+            max-width: 420px;
+            text-align: center;
+            transition: all 0.2s ease;
+        }
+
+        h1 {
+            font-size: 1.7rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, #fff, #a0a0c0);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 16px;
+            letter-spacing: -0.3px;
+        }
+
+        .timer-display {
+            font-size: 5.2rem;
+            font-weight: 800;
+            font-family: 'SF Mono', 'Fira Mono', 'Courier New', monospace;
+            background: #0f0f1a;
+            padding: 28px 20px;
+            border-radius: 60px;
+            margin: 24px 0;
+            color: #4cffb0;
+            text-shadow: 0 0 8px rgba(76, 255, 176, 0.4);
+            letter-spacing: 4px;
+            box-shadow: inset 0 5px 12px rgba(0, 0, 0, 0.5), 0 2px 4px rgba(255, 255, 255, 0.05);
+            border: 1px solid #2a2a44;
+        }
+
+        .status-badge {
+            display: inline-block;
+            background: #2c2c3a;
+            padding: 8px 20px;
+            border-radius: 60px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 20px;
+            color: #aaa;
+            transition: all 0.2s;
+        }
+
+        .status-badge.active {
+            background: #1e4a3b;
+            color: #4cffb0;
+            box-shadow: 0 0 6px #4cffb0;
+        }
+
+        button {
+            background: #2d2d44;
+            border: none;
+            padding: 18px 36px;
+            font-size: 1.6rem;
+            font-weight: 700;
+            border-radius: 60px;
+            color: white;
+            cursor: pointer;
+            transition: transform 0.1s, background 0.2s;
+            width: 80%;
+            margin: 16px 0 12px;
+            box-shadow: 0 6px 0 #12121c;
+            font-family: inherit;
+            letter-spacing: 1px;
+        }
+
+        button:active {
+            transform: translateY(2px);
+            box-shadow: 0 3px 0 #12121c;
+        }
+
+        .start-btn {
+            background: #0f6b4b;
+            box-shadow: 0 6px 0 #06422f;
+        }
+
+        .stop-btn {
+            background: #7a2e3a;
+            box-shadow: 0 6px 0 #4a1c24;
+        }
+
+        .info {
+            font-size: 0.8rem;
+            color: #8e8ea6;
+            margin-top: 24px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding-top: 22px;
+        }
+
+        .cycle-counter {
+            font-size: 0.9rem;
+            background: #00000030;
+            display: inline-block;
+            padding: 6px 16px;
+            border-radius: 40px;
+            margin-top: 8px;
+            font-weight: 500;
+        }
+
+        @media (max-width: 480px) {
+            .timer-display { font-size: 3.8rem; padding: 22px 12px; }
+            button { width: 90%; padding: 14px 24px; font-size: 1.4rem; }
+            .container { padding: 24px 18px 36px; border-radius: 56px; }
+        }
+
+        /* Стили для добавления на главный экран (iOS) */
+        .install-hint {
+            font-size: 0.7rem;
+            background: #00000050;
+            border-radius: 50px;
+            padding: 6px 12px;
+            display: inline-block;
+            margin-top: 12px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🔄 ЦИКЛ 5.5 СЕК</h1>
+    <div class="status-badge" id="statusBadge">⚪ ГОТОВ</div>
+    <div class="timer-display" id="timerDisplay">5.500</div>
+    
+    <button id="actionButton" class="start-btn">▶ СТАРТ</button>
+    
+    <div class="cycle-counter" id="cycleCounter">🔁 Циклов: 0</div>
+    <div class="info">
+        ⏱️ Таймер издаёт звук «бип» каждые 5.5 секунд<br>
+        🎵 <span id="audioReadyHint">Нажмите «СТАРТ» для активации звука</span>
+    </div>
+    <div class="install-hint">
+        📲 Для работы как приложение: «Поделиться» → «На экран «Домой»»
+    </div>
+</div>
+
+<script>
+    (function() {
+        // ------------- КОНФИГУРАЦИЯ -------------
+        const CYCLE_INTERVAL_SEC = 5.5;        // 5.5 секунд цикл
+        const UPDATE_DISPLAY_MS = 30;           // частота обновления дисплея (мс)
+        
+        // DOM элементы
+        const timerDisplay = document.getElementById('timerDisplay');
+        const actionButton = document.getElementById('actionButton');
+        const statusBadge = document.getElementById('statusBadge');
+        const cycleCounterSpan = document.getElementById('cycleCounter');
+        const audioReadyHint = document.getElementById('audioReadyHint');
+        
+        // Состояния
+        let isRunning = false;          // активен ли таймер
+        let timerInterval = null;       // интервал для визуального обновления (requestAnimationFrame тоже можно, но setInterval надёжен)
+        let cycleTimeout = null;         // таймаут на следующий цикл
+        let currentCycleRemaining = 0;   // сколько осталось в текущем цикле (секунд)
+        let cycleCount = 0;              // счётчик звуковых сигналов/циклов
+        
+        // Звук — создаем через Web Audio API (работает везде, не требует внешних файлов)
+        let audioContext = null;
+        let isAudioAllowed = false;       // флаг для iOS: нужно касание для активации
+        
+        // ---------- ИНИЦИАЛИЗАЦИЯ ЗВУКА (без внешних файлов, генерируем BEEP) ----------
+        function initAudioContext() {
+            if (audioContext) return audioContext;
+            // Создаем контекст только после жеста пользователя
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (!AudioCtx) {
+                console.warn("Web Audio API не поддерживается");
+                audioReadyHint.innerText = "⚠️ Звук не поддерживается браузером";
+                return null;
+            }
+            audioContext = new AudioCtx();
+            return audioContext;
+        }
+        
+        // Воспроизведение короткого звука «бип» (одночастотный гудок 800 Гц, длит. 150 мс)
+        function playBeep() {
+            if (!isAudioAllowed) {
+                // Если звук ещё не активирован — пытаемся активировать через этот вызов
+                // При старте будет вызвано, iOS разрешит после жеста "СТАРТ"
+                const ctx = initAudioContext();
+                if (ctx && ctx.state === 'suspended') {
+                    ctx.resume().then(() => {
+                        isAudioAllowed = true;
+                        audioReadyHint.innerText = "🔊 Звук активирован";
+                        actualPlayBeep();
+                    }).catch(e => console.log("Audio resume error", e));
+                } else if (ctx && ctx.state === 'running') {
+                    isAudioAllowed = true;
+                    audioReadyHint.innerText = "🔊 Звук активен";
+                    actualPlayBeep();
+                } else {
+                    // fallback если нет контекста
+                    return;
+                }
+                return;
+            }
+            actualPlayBeep();
+        }
+        
+        function actualPlayBeep() {
+            try {
+                if (!audioContext) {
+                    // пробуем создать повторно
+                    if (!initAudioContext()) return;
+                }
+                // состояние контекста: если suspended -> вызываем resume, но при повторном цикле скорее всего уже running
+                if (audioContext.state === 'suspended') {
+                    audioContext.resume().then(() => {
+                        generateAndPlayBeep();
+                    }).catch(console.log);
+                } else {
+                    generateAndPlayBeep();
+                }
+            } catch(e) {
+                console.warn("beep error", e);
+            }
+        }
+        
+        function generateAndPlayBeep() {
+            const ctx = audioContext;
+            if (!ctx || ctx.state !== 'running') return;
+            
+            const now = ctx.currentTime;
+            const oscillator = ctx.createOscillator();
+            const gainNode = ctx.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(ctx.destination);
+            
+            oscillator.frequency.value = 880;   // частота 880 Гц (приятный бип)
+            gainNode.gain.value = 0.3;          // громкость 30%
+            
+            oscillator.start();
+            // резкое затухание чтобы не было щелчка на конце
+            gainNode.gain.exponentialRampToValueAtTime(0.00001, now + 0.15);
+            oscillator.stop(now + 0.15);
+        }
+        
+        // ---------- ОТОБРАЖЕНИЕ ОСТАВШЕГОСЯ ВРЕМЕНИ ----------
+        function updateDisplayFromRemaining(remainingSec) {
+            if (remainingSec < 0) remainingSec = 0;
+            timerDisplay.textContent = remainingSec.toFixed(3);
+        }
+        
+        // Главная функция запуска цикла: запускает следующий отсчёт и бип
+        function scheduleNextCycle() {
+            if (!isRunning) return;
+            
+            // 1) Издаём звуковой сигнал
+            playBeep();
+            
+            // 2) Увеличиваем счётчик циклов
+            cycleCount++;
+            cycleCounterSpan.innerHTML = `🔁 Циклов: ${cycleCount}`;
+            
+            // 3) Устанавливаем оставшееся время в CYCLE_INTERVAL_SEC и запускаем визуальный обратный отсчёт
+            currentCycleRemaining = CYCLE_INTERVAL_SEC;
+            updateDisplayFromRemaining(currentCycleRemaining);
+            
+            // 4) Запускаем interval для плавной отрисовки (обновление ~30fps)
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                if (!isRunning) return;
+                if (currentCycleRemaining > 0) {
+                    // уменьшаем на время прошедшее между тиками (но проще уменьшать шагом)
+                    // Для точности используем уменьшение на фиксированную долю, но чтобы не отстать синхронизируем с setTimeout.
+                    // Этот интервал только для отображения, время срабатывания цикла зависит от setTimeout.
+                    // currentCycleRemaining будет меняться вручную при каждом событии.
+                }
+            }, UPDATE_DISPLAY_MS);
+            
+            // 5) Настоящий таймер на следующий звук через 5.5 секунд
+            if (cycleTimeout) clearTimeout(cycleTimeout);
+            const startOfCycle = performance.now();
+            
+            function step() {
+                if (!isRunning) return;
+                const now = performance.now();
+                const elapsed = (now - startOfCycle) / 1000;
+                let remaining = CYCLE_INTERVAL_SEC - elapsed;
+                if (remaining <= 0) {
+                    // Время цикла истекло — запускаем следующий цикл
+                    if (isRunning) {
+                        scheduleNextCycle();
+                    }
+                    return;
+                }
+                // Обновляем дисплей
+                currentCycleRemaining = remaining;
+                updateDisplayFromRemaining(currentCycleRemaining);
+                requestAnimationFrame(step);
+            }
+            // Запускаем анимацию для плавного счёта
+            const animFrame = requestAnimationFrame(function frameLoop() {
+                if (!isRunning) return;
+                const now = performance.now();
+                const elapsed = (now - startOfCycle) / 1000;
+                let remaining = CYCLE_INTERVAL_SEC - elapsed;
+                if (remaining <= 0) {
+                    if (isRunning) scheduleNextCycle();
+                    return;
+                }
+                currentCycleRemaining = remaining;
+                updateDisplayFromRemaining(currentCycleRemaining);
+                requestAnimationFrame(frameLoop);
+            });
+            
+            // сохраняем идентификатор для очистки при остановке
+            cycleTimeout = { frame: animFrame, startTime: startOfCycle, intervalId: animFrame };
+            // функция для остановки анимации будет использована
+            const oldCleanup = cycleTimeout;
+            cycleTimeout = {
+                frame: animFrame,
+                startTime: startOfCycle,
+                cleanup: function() { cancelAnimationFrame(animFrame); }
+            };
+            // ссылка для корректной остановки
+            if (oldCleanup && typeof oldCleanup === 'object' && oldCleanup.cleanup) {
+                // ничего, просто перезатираем
+            }
+        }
+        
+        // Остановка всего процесса (сбрасываем таймеры)
+        function stopCyclicTimer() {
+            if (!isRunning) return;
+            isRunning = false;
+            
+            // Очищаем отложенный цикл (если использовался setTimeout, но мы на requestAnimationFrame)
+            if (cycleTimeout) {
+                if (cycleTimeout.frame) cancelAnimationFrame(cycleTimeout.frame);
+                if (cycleTimeout.cleanup) cycleTimeout.cleanup();
+                cycleTimeout = null;
+            }
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+            
+            // Меняем UI
+            actionButton.textContent = '▶ СТАРТ';
+            actionButton.classList.remove('stop-btn');
+            actionButton.classList.add('start-btn');
+            statusBadge.textContent = '⚪ ОСТАНОВЛЕН';
+            statusBadge.classList.remove('active');
+            
+            // Показываем полный интервал (5.5) на дисплее, если нет активного цикла
+            timerDisplay.textContent = CYCLE_INTERVAL_SEC.toFixed(3);
+            currentCycleRemaining = CYCLE_INTERVAL_SEC;
+        }
+        
+        // Запуск циклического таймера (сначала сбрасываем состояние)
+        function startCyclicTimer() {
+            if (isRunning) return;
+            
+            // Предварительно активируем звук при касании — это именно то место, где iOS разрешит audioContext
+            // Вызовем инициализацию и резюмируем контекст, чтобы звук точно заработал при первом бипе.
+            const ctx = initAudioContext();
+            if (ctx && ctx.state === 'suspended') {
+                ctx.resume().then(() => {
+                    isAudioAllowed = true;
+                    audioReadyHint.innerText = "🔊 Звук готов";
+                }).catch(e => console.log);
+            } else if (ctx && ctx.state === 'running') {
+                isAudioAllowed = true;
+                audioReadyHint.innerText = "🔊 Звук активен";
+            }
+            
+            // Сброс счётчиков и флагов
+            cycleCount = 0;
+            cycleCounterSpan.innerHTML = `🔁 Циклов: 0`;
+            isRunning = true;
+            
+            // Обновляем UI
+            actionButton.textContent = '⏹ СТОП';
+            actionButton.classList.remove('start-btn');
+            actionButton.classList.add('stop-btn');
+            statusBadge.textContent = '🔊 АКТИВЕН';
+            statusBadge.classList.add('active');
+            
+            // Очищаем всё на всякий случай
+            if (cycleTimeout) {
+                if (cycleTimeout.frame) cancelAnimationFrame(cycleTimeout.frame);
+                cycleTimeout = null;
+            }
+            if (timerInterval) clearInterval(timerInterval);
+            
+            // Запускаем первый цикл (без звука в момент старта? нужно: первый бип через 5.5 сек)
+            // По техническому заданию: циклический таймер 5.5 сек со звуком. Звук должен раздаваться каждые 5.5 секунд.
+            // То есть при старте сначала идёт ожидание 5.5 секунд, потом бип, потом опять ожидание, бип...
+            // У нас scheduleNextCycle сразу издаст бип. Однако правильнее: первый бип через 5.5 секунд после старта.
+            // Исправляем: делаем так, чтобы scheduleNextCycle вызывала бип по завершению задержки.
+            // Перепишем немного логику:
+            
+            // Правильная логика:
+            // После старта ждём 5.5 секунды -> бип -> увеличить счётчик -> подождать 5.5 сек -> бип -> ...
+            // Сейчас scheduleNextCycle вызовет playBeep немедленно. Нам нужно отложить.
+            // Создадим новый запуск с ожиданием:
+            function firstWaitAndBeep() {
+                if (!isRunning) return;
+                // устанавливаем оставшееся время
+                currentCycleRemaining = CYCLE_INTERVAL_SEC;
+                updateDisplayFromRemaining(currentCycleRemaining);
+                const startTime = performance.now();
+                
+                function tick(now) {
+                    if (!isRunning) return;
+                    const elapsed = (now - startTime) / 1000;
+                    let rem = CYCLE_INTERVAL_SEC - elapsed;
+                    if (rem <= 0) {
+                        // время пришло, издаём бип и запускаем циклы с бипом в начале каждого интервала
+                        playBeep();
+                        cycleCount++;
+                        cycleCounterSpan.innerHTML = `🔁 Циклов: ${cycleCount}`;
+                        // теперь переходим в режим обычных циклов (с последующими бипами)
+                        runContinuousCycles();
+                        return;
+                    }
+                    currentCycleRemaining = rem;
+                    updateDisplayFromRemaining(currentCycleRemaining);
+                    requestAnimationFrame(tick);
+                }
+                cycleTimeout = { frame: requestAnimationFrame(tick), cleanup: () => cancelAnimationFrame(cycleTimeout.frame) };
+            }
+            
+            function runContinuousCycles() {
+                if (!isRunning) return;
+                // Запускаем бесконечные циклы с отсчётом 5.5 секунд между бипами:
+                function scheduleBeepLoop() {
+                    if (!isRunning) return;
+                    // Запоминаем начало интервала
+                    const startLoop = performance.now();
+                    currentCycleRemaining = CYCLE_INTERVAL_SEC;
+                    updateDisplayFromRemaining(currentCycleRemaining);
+                    
+                    function loopTick(now) {
+                        if (!isRunning) return;
+                        const elapsed = (now - startLoop) / 1000;
+                        let remain = CYCLE_INTERVAL_SEC - elapsed;
+                        if (remain <= 0) {
+                            playBeep();
+                            cycleCount++;
+                            cycleCounterSpan.innerHTML = `🔁 Циклов: ${cycleCount}`;
+                            scheduleBeepLoop();
+                            return;
+                        }
+                        currentCycleRemaining = remain;
+                        updateDisplayFromRemaining(currentCycleRemaining);
+                        requestAnimationFrame(loopTick);
+                    }
+                    const frameId = requestAnimationFrame(loopTick);
+                    cycleTimeout = { frame: frameId, cleanup: () => cancelAnimationFrame(frameId) };
+                }
+                scheduleBeepLoop();
+            }
+            
+            // запускаем первый отсчёт без мгновенного бипа
+            if (cycleTimeout && cycleTimeout.cleanup) cycleTimeout.cleanup();
+            firstWaitAndBeep();
+            
+            // сохраним дополнительно чтобы stop работал корректно
+            const originalStop = stopCyclicTimer;
+            window._tempOverride = null;
+        }
+        
+        // переопределим stop для чистоты (чистим как новую функцию)
+        function enhancedStop() {
+            if (!isRunning) return;
+            isRunning = false;
+            if (cycleTimeout) {
+                if (cycleTimeout.frame) cancelAnimationFrame(cycleTimeout.frame);
+                if (cycleTimeout.cleanup) cycleTimeout.cleanup();
+                cycleTimeout = null;
+            }
+            if (timerInterval) clearInterval(timerInterval);
+            actionButton.textContent = '▶ СТАРТ';
+            actionButton.classList.remove('stop-btn');
+            actionButton.classList.add('start-btn');
+            statusBadge.textContent = '⚪ ОСТАНОВЛЕН';
+            statusBadge.classList.remove('active');
+            timerDisplay.textContent = CYCLE_INTERVAL_SEC.toFixed(3);
+            currentCycleRemaining = CYCLE_INTERVAL_SEC;
+        }
+        
+        // Привязываем обработчики
+        actionButton.onclick = () => {
+            if (isRunning) {
+                enhancedStop();
+            } else {
+                startCyclicTimer();
+            }
+        };
+        
+        // Активация звука при первом касании любой области + установка флага для iOS
+        const resumeAudioOnTouch = () => {
+            const ctx = initAudioContext();
+            if (ctx && ctx.state === 'suspended') {
+                ctx.resume().then(() => {
+                    isAudioAllowed = true;
+                    audioReadyHint.innerText = "🔊 Звук активирован";
+                }).catch(console.log);
+            } else if (ctx && ctx.state === 'running') {
+                isAudioAllowed = true;
+                audioReadyHint.innerText = "🔊 Звук доступен";
+            }
+            document.body.removeEventListener('touchstart', resumeAudioOnTouch);
+            document.body.removeEventListener('click', resumeAudioOnTouch);
+        };
+        document.body.addEventListener('touchstart', resumeAudioOnTouch);
+        document.body.addEventListener('click', resumeAudioOnTouch);
+        
+        // начальное отображение
+        timerDisplay.textContent = CYCLE_INTERVAL_SEC.toFixed(3);
+        currentCycleRemaining = CYCLE_INTERVAL_SEC;
+    })();
+</script>
+</body>
+</html>
